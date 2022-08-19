@@ -1,5 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
+
 
 
 static const unsigned char S_BOX[] = {
@@ -38,14 +40,6 @@ static const unsigned char S_BOX[] = {
   0xa0, 0xe0, 0x3b, 0x4d, 0xae, 0x2a, 0xf5, 0xb0, 0xc8, 0xeb, 0xbb, 0x3c, 0x83, 0x53, 0x99, 0x61,
   0x17, 0x2b, 0x04, 0x7e, 0xba, 0x77, 0xd6, 0x26, 0xe1, 0x69, 0x14, 0x63, 0x55, 0x21, 0x0c, 0x7d };
 
-union uKey
-{
-  unsigned int int32;
-  unsigned char bytes[4];
-};
-
-  //****DEBUG TOOLS *****
-
   void printCharArr(unsigned char* arr, size_t size)
   {
     for (int i = 0; i < size/4; i++)
@@ -63,62 +57,21 @@ union uKey
     printf("\n");
   }
 
-   void printIntArr(unsigned int* arr, size_t size)
-  {
-    for (int i = 0; i < size/sizeof(int); i++)
-    {
-      // unsigned int swapped = ((arr[i]>>24)&0xff) | // move byte 3 to byte 0
-      //               ((arr[i]<<8)&0xff0000) | // move byte 1 to byte 2
-      //               ((arr[i]>>8)&0xff00) | // move byte 2 to byte 1
-      //               ((arr[i]<<24)&0xff000000); // byte 0 to byte 3
-      printf("%x ", arr[i]);
-
-    }
-
-    
-    printf("\n");
-  }
-
-  void print2DArr(unsigned char** arr, size_t size, size_t subSize)
-  {
-    for (int i = 0; i < size/sizeof(char *); i++)
-      for (int j = 0; j < subSize; j++)
-        printf("%x", arr[i][j]);
-  }
-
-
-//****ACTUAL CODE ****
-
-
 
 void SubBytes(unsigned char* bytes, size_t size)
 {
   for (int i = 0; i < size; i++)
-  {
     bytes[i] = S_BOX[bytes[i]];
-  }
 }
 
-void RevSubBytes(unsigned char* bytes)
+void RevSubBytes(unsigned char* bytes, size_t size)
 {
-  for (int i = 0; i < sizeof(bytes)/sizeof(char); i++)
-  {
+  for (int i = 0; i < size; i++)
     bytes[i] = REV_S_BOX[bytes[i]];
-  }
 }
 
 void ShiftRows(unsigned char* bytes)
 {
-  // for (int i = 0; i <= 4; i++)
-  // {
-
-  //   unsigned char temp = bytes[i*4];
-  //   for (int j = 1; j >= 3; j++)
-  //   {
-  //     bytes[i*4 + (j - i)%4] = bytes[j];
-  //   }
-  //   bytes[i*4 + 3] = temp;
-  // }
   for (int i = 0; i < 4; i++)
   {
     for (int j = 0; j < i; j++)
@@ -128,24 +81,7 @@ void ShiftRows(unsigned char* bytes)
       bytes[i + 4] = bytes[i + 8];
       bytes[i + 8] = bytes[i + 12];
       bytes[i + 12] = temp;
-
-      
     }
-          
-    
-    // unsigned char temp = bytes[i];
-    // bytes[i] = bytes[5*i];
-    // bytes[i + 4] = bytes[(5*i + 4)%16];
-    // bytes[i + 8] = bytes[(5*i + 8)%16];
-    // bytes[i + 12] = bytes[(5*i + 12)%16];
-
-    // for (int j = 0; j < 4; j++)
-    // {
-    //   //  bytes[i + 4*j] = bytes[i + 4*((j + i)%4)];
-    //   // bytes[i + 4*((j+i)%4)] = bytes[i +4*j];
-    //   bytes[i + 4*j] =  bytes[i + 4*((j+i)%4)];
-    // }
-    // bytes[i + 12 - 4*(i-1)%4] = temp;
     
   }
   
@@ -153,40 +89,25 @@ void ShiftRows(unsigned char* bytes)
 
 void RevShiftRows(unsigned char* bytes)
 {
-  for (int i = 0; i <= 4; i++)
+  for (int i = 0; i < 4; i++)
   {
-    unsigned char temp = bytes[i*4 + 3];
-    for (int j = 2; j >= 0; j--)
+    for (int j = 0; j < i; j++)
     {
-      bytes[i*4 + (j + i)%4] = bytes[j];
+      unsigned char temp = bytes[i + 12];
+      bytes[i + 12] = bytes[i + 8];
+      bytes[i + 8] = bytes[i + 4];
+      bytes[i + 4] = bytes[i];
+      bytes[i] = temp;
     }
-    bytes[i*4] = temp;
+    
   }
+
 }
 
-// unsigned char xtime(unsigned char byte)
-// {
-//   return ((byte<<1) ^ (((byte>>7) & 1) * 0x1b));
-// }
-// #define xtime(x)   ((x << 1) ^ (((x >> 7) & 0x01) * 0x1b))
-
-// unsigned char xtimes(unsigned char byte, int times)
-// {
-//   for (int i = 0; i < times; i++)
-//     byte = xtime(byte);
-//   return byte;
-// }
 
 unsigned char Gmul(unsigned char a, unsigned char b)
 {
-      // return ((((y >> 0) & 1) * xtimes(x, 0)) ^
-      //         (((y >> 1) & 1) * xtimes(x, 1)) ^
-      //         (((y >> 2) & 1) * xtimes(x, 2)) ^
-      //         (((y >> 3) & 1) * xtimes(x, 3)) ^
-      //         (((y >> 4) & 1) * xtimes(x, 4)) ^
-      //         (((y >> 5) & 1) * xtimes(x, 5)) ^
-      //         (((y >> 6) & 1) * xtimes(x, 6)) ^
-      //         (((y >> 7) & 1) * xtimes(x, 7)) );
+
     unsigned char p = 0;
     unsigned char counter;
     unsigned char hi_bit_set;
@@ -210,83 +131,35 @@ void MixColumns(unsigned char* bytes)
       unsigned char arr[4];
       for (int j = 0; j < 4; j++)
         arr[j] = bytes[4*i + j];
-    // if(i == 0)
-    // {
-    //   printf("A: %x\n", arr[0]);
-    //   printf("B: %x\n", Gmul(arr[1], 2));
-    //   printf("C: %x\n", Gmul(arr[2], 3));
-    //   printf("D: %x\n", arr[3]);
-    //   printf("E: %x\n", arr[0] ^ Gmul(arr[1], 2) ^ Gmul(arr[2], 3) ^ arr[3]);
-    // }
+
     bytes[4*i] = Gmul(arr[0], 2) ^ Gmul(arr[1], 3) ^ arr[2] ^ arr[3];
     bytes[4*i + 1] = arr[0] ^ Gmul(arr[1], 2) ^ Gmul(arr[2], 3) ^ arr[3];
     bytes[4*i + 2] = arr[0] ^ arr[1] ^ Gmul(arr[2], 2) ^ Gmul(arr[3], 3);
     bytes[4*i + 3] = Gmul(arr[0], 3) ^ arr[1] ^ arr[2] ^ Gmul(arr[3], 2);
 
   }
-  printf("%x\n", bytes[1]);
 
-  // for (int i = 0; i < 4; i++)
-  // {
-  //   unsigned char arr[4];
-  //   for (int j = 0; j < 4; j++)
-  //     arr[j] = bytes[4*i + j];
-
-  //   unsigned char t = arr[0] ^ arr[1] ^ arr[2] ^ arr[3];
-  //   bytes[4*i] ^= t ^ xTime(arr[0] ^ arr[1]);
-  //   bytes[4*i + 1] ^= t ^ xTime(arr[1] ^ arr[2]);
-  //   bytes[4*i + 2] ^= t ^ xTime(arr[2] ^ arr[3]);
-  //   bytes[4*i + 3] ^= t ^ xTime(arr[3] ^ arr[0]);
-  // }
-
-//     unsigned char Tmp,Tm,t;
-//     for(int i = 0;i < 4;i++)
-//     {    
-//         t   = state[i];
-//         Tmp = state[i] ^ state[4 + i] ^ state[8 + i] ^ state[12+ i];
-//         Tm  = state[i] ^ state[4 + i]; Tm = xtime(Tm); state[i] ^= Tm ^ Tmp ;
-//         Tm  = state[i] ^ state[8+ i]; Tm = xtime(Tm); state[4 + i] ^= Tm ^ Tmp ;
-//         Tm  = state[8 + i] ^ state[12 + i]; Tm = xtime(Tm); state[8 + i] ^= Tm ^ Tmp ;
-//         Tm  = state[12 + i] ^ t;           Tm = xtime(Tm); state[12 + i] ^= Tm ^ Tmp ;
-//     }
-// }
 }
 void RevMixColumns(unsigned char* bytes)
 {
-  // for (int i = 0; i < 4; i++)
-  // {
-  //   unsigned char u = xTime(xTime(bytes[4*i] ^ bytes[4*i + 2]));
-  //   unsigned char v = xTime(xTime(bytes[4*i + 1] ^ bytes[4*i + 3]));
+  for (int i = 0; i < 4; i++)
+  {
+      unsigned char arr[4];
+      for (int j = 0; j < 4; j++)
+        arr[j] = bytes[4*i + j];
 
-  //   bytes[4*i] ^= u;
-  //   bytes[4*i + 1] ^= v;
-  //   bytes[4*i + 2] ^= u;
-  //   bytes[4*i + 3] ^= v;
-    
-  //   MixColumns(bytes);
-  // }
-  
+    bytes[4*i] = Gmul(arr[0], 0x0E) ^ Gmul(arr[1], 0x0B) ^ Gmul(arr[2], 0x0D) ^ Gmul(arr[3], 0x09);
+    bytes[4*i + 1] = Gmul(arr[0], 0x09) ^ Gmul(arr[1], 0x0E) ^ Gmul(arr[2], 0x0B) ^ Gmul(arr[3], 0x0D);
+    bytes[4*i + 2] = Gmul(arr[0], 0x0D) ^ Gmul(arr[1], 0x09) ^ Gmul(arr[2], 0x0E) ^ Gmul(arr[3], 0x0B);
+    bytes[4*i + 3] = Gmul(arr[0], 0x0B) ^ Gmul(arr[1], 0x0D) ^ Gmul(arr[2], 0x09) ^ Gmul(arr[3], 0x0E);
+
+  }
 }
 
 void AddRoundKey(unsigned char* bytes, unsigned char* key)
 {
-
-    // union uKey data;
     for (int i = 0; i < 16; i++)
       bytes[i] ^= key[i];
-
-    
-    
-    // for (int j = 0; j < 4; j++)
-    //   data.bytes[j] = bytes[4*i + j];
-
-    // data.int32 ^= key[i];
-
-    // for (int j = 0; j < 4; j++){
-    //   bytes[4*i + j] = data.bytes[j];
-    // }
-  
-  
 }
 
 
@@ -315,7 +188,6 @@ static unsigned char** SplitBlocks(unsigned char *bytes, size_t size)
       }
     }
   }
-  // unsigned char A = blocks[1][12];
   return blocks;
 }
 
@@ -334,57 +206,21 @@ unsigned char* ConnectBlocks(unsigned char **blocks, size_t size)
 
 }
 
-unsigned char* KeyExpansion(unsigned char *key)
+unsigned char* KeyExpansion(unsigned char *key, bool printKey)
 {
-    // static const unsigned int ROUND_CONST[] = {0x1000000, 0x2000000, 0x4000000, 0x8000000, 0x10000000, 0x20000000, 0x40000000, 0x80000000, 0x1B000000, 0x36000000}; //change for big endian
-    // static union uKey keys[44];
-    
-    // for (int i = 0; i < 4; i++)
-    // {
-    //   for (int j = 0; j < 4; j++)
-    //     keys[i].bytes[j] = key[4*i + j]; 
-
-    // }
-
-    // for (int i = 4; i < 44; i++)
-    // {
-    //   if(i % 4 == 0)
-    //   {
-    //     union uKey* operand = malloc(4); 
-    //     operand->int32 = (keys[i - 1].int32 << 8) | (keys[i - 1].int32 >> 24); // change for big endian
-    //     SubBytes(operand->bytes, sizeof(operand));
-    //     operand->int32 = operand->int32 ^ ROUND_CONST[i/4 - 1];
-    //     keys[i].int32 = keys[i - 4].int32 ^ operand->int32;
-    //     free(operand);
-    //   }
-    //   else
-    //   { 
-    //     keys[i].int32 = keys[i - 4].int32 ^ keys[i - 1].int32;
-    //   }
-    // }
-    // // printIntArr(keys, sizeof(keys)); //this shit is wrong af
-    // return keys;
 
     static const unsigned int ROUND_CONST[] = {0x00, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36 }; //change for big endian
-    // static union uKey keys[44];
     static unsigned char keys[176];
 
     for (int i = 0; i < 16; i++)
       keys[i] = key[i];
-    
-    // for (int i = 0; i < 4; i++)
-    // {
-    //   for (int j = 0; j < 4; j++)
-    //     keys[i].bytes[j] = key[4*i + j]; 
-
-    // }
 
     for (int i = 16; i < 176; i+=4)
     {
       if(i % 16 == 0)
       {
         unsigned char *operand = malloc(4); 
-        // operand->int32 = (keys[i - 1].int32 << 8) | (keys[i - 1].int32 >> 24); // change for big endian 
+
         for (int j = 0; j < 4; j++)   
           operand[j] = keys[i - 4 + (j+1)%4]; //check if right
           
@@ -396,108 +232,132 @@ unsigned char* KeyExpansion(unsigned char *key)
         
         free(operand);
         
-
-        
-        // SubBytes(operand->bytes, sizeof(operand));
-        // operand->int32 = operand->int32 ^ ROUND_CONST[i/4 - 1];
-        // keys[i].int32 = keys[i - 4].int32 ^ operand->int32;
-        // free(operand);
       }
       else
       { 
         for (int j = 0; j < 4; j++)        
           keys[i + j] = keys[i - 16 + j] ^ keys[i - 4 + j];
         
-        // keys[i].int32 = keys[i - 4].int32 ^ keys[i - 1].int32;
       }
     }
-    printCharArr(keys, sizeof(keys)); //this shit is wrong af
+    if(printKey) printCharArr(keys, sizeof(keys)); 
     return keys;
 
 }
 
 
-unsigned char* Encrypt(unsigned char *data, unsigned char *key, size_t dataSize)
+unsigned char* Encrypt(unsigned char *data, unsigned char *key, size_t dataSize, bool showSteps)
 {
     static unsigned char* keys;
-    keys = KeyExpansion(key);
+
+    if(showSteps) printf("Expanded Key:\n");
+    keys = KeyExpansion(key, showSteps);
 
     unsigned char** blocks = SplitBlocks(data, dataSize);
     dataSize += dataSize%16;
 
     for (int i = 0; i < dataSize/16; i++)
     {
-      { printf("input\n"); printCharArr(blocks[i], 16);}
+      if(showSteps) { printf("input\n"); printCharArr(blocks[i], 16);}
 
       AddRoundKey(blocks[i], (unsigned char[]){keys[0], keys[1], keys[2], keys[3], 
                               keys[4], keys[5], keys[6], keys[7], keys[8], 
                               keys[9], keys[10], keys[11], keys[12], 
                               keys[13], keys[14], keys[15]});
-      { printf("initial xor w\\key\n"); printCharArr(blocks[i], 16);}
+      if(showSteps) { printf("initial xor w\\key\n"); printCharArr(blocks[i], 16);}
       
       for (int j = 1; j < 10; j++)
       {
-        printf("-----ROUND %d-----\n", j);
+        if(showSteps) {printf("-----ROUND %d-----\n", j);}
 
         SubBytes(blocks[i], dataSize);        
-        { printf("after s-box\n"); printCharArr(blocks[i], 16);}
+        if(showSteps) { printf("after s-box\n"); printCharArr(blocks[i], 16);}
 
         ShiftRows(blocks[i]);
-        { printf("after shiftrows\n"); printCharArr(blocks[i], 16);}
+        if(showSteps) { printf("after shiftrows\n"); printCharArr(blocks[i], 16);}
 
         MixColumns(blocks[i]);
-        { printf("after mixcolumns\n"); printCharArr(blocks[i], 16);}
+        if(showSteps) { printf("after mixcolumns\n"); printCharArr(blocks[i], 16);}
 
         AddRoundKey(blocks[i], (unsigned char[]){keys[j*16], keys[j*16 + 1], keys[j*16 + 2], keys[j*16 + 3], 
                               keys[j*16 + 4], keys[j*16 + 5], keys[j*16 + 6], keys[j*16 + 7], keys[j*16 + 8], 
                               keys[j*16 + 9], keys[j*16 + 10], keys[j*16 + 11], keys[j*16 + 12], 
                               keys[j*16 + 13], keys[j*16 + 14], keys[j*16 + 15]});
-        { printf("after xor w\\key\n"); printCharArr(blocks[i], 16);}
+        if(showSteps) { printf("after xor w\\key\n"); printCharArr(blocks[i], 16);}
 
       }
+      if(showSteps) {printf("-----ROUND 10-----\n");}
 
       SubBytes(blocks[i], dataSize);
+      if(showSteps) { printf("after s-box\n"); printCharArr(blocks[i], 16);}
+
       ShiftRows(blocks[i]);
+      if(showSteps) { printf("after shiftrows\n"); printCharArr(blocks[i], 16);}
+
       AddRoundKey(blocks[i], (unsigned char[]){keys[10*16], keys[10*16 + 1], keys[10*16 + 2], keys[10*16 + 3], 
                               keys[10*16 + 4], keys[10*16 + 5], keys[10*16 + 6], keys[10*16 + 7], keys[10*16 + 8], 
                               keys[10*16 + 9], keys[10*16 + 10], keys[10*16 + 11], keys[10*16 + 12], 
                               keys[10*16 + 13], keys[10*16 + 14], keys[10*16 + 15]});
+      if(showSteps) { printf("after xor w\\key\n"); printCharArr(blocks[i], 16);}
+
     }
     return ConnectBlocks(blocks, dataSize);
 
 }
 
-unsigned char* Decrypt(unsigned char *data,unsigned char *key, size_t dataSize)
+unsigned char* Decrypt(unsigned char *data,unsigned char *key, size_t dataSize, bool showSteps)
 {
     static unsigned char* keys;
-    keys = KeyExpansion(key);
+
+    if(showSteps) printf("Expanded Key:\n");
+    keys = KeyExpansion(key, showSteps);
 
     unsigned char** blocks = SplitBlocks(data, dataSize);
     dataSize += dataSize%16;
 
     for (int i = 0; i < sizeof(blocks)/sizeof(char *); i++)
     {
+      if(showSteps) { printf("input\n"); printCharArr(blocks[i], 16);}
+
       AddRoundKey(blocks[i], (unsigned char[]){keys[10*16], keys[10*16 + 1], keys[10*16 + 2], keys[10*16 + 3], 
                               keys[10*16 + 4], keys[10*16 + 5], keys[10*16 + 6], keys[10*16 + 7], keys[10*16 + 8], 
                               keys[10*16 + 9], keys[10*16 + 10], keys[10*16 + 11], keys[10*16 + 12], 
                               keys[10*16 + 13], keys[10*16 + 14], keys[10*16 + 15]});
-                              
-      RevSubBytes(blocks[i]);
-      for (int j = 9; j > 10; j--)
+      if(showSteps) { printf("Reversed final xor w\\key\n"); printCharArr(blocks[i], 16);}
+
+
+
+      for (int j = 9; j > 0; j--)
       {
+        if(showSteps) {printf("----- Reversing ROUND %d-----\n", j);}
+        RevShiftRows(blocks[i]);
+        if(showSteps) { printf("Reversed shiftrows\n"); printCharArr(blocks[i], 16);}
+
+        RevSubBytes(blocks[i], dataSize);
+        if(showSteps) { printf("Reversed s-box\n"); printCharArr(blocks[i], 16);}
+
         AddRoundKey(blocks[i], (unsigned char[]){keys[j*16], keys[j*16 + 1], keys[j*16 + 2], keys[j*16 + 3], 
                               keys[j*16 + 4], keys[j*16 + 5], keys[j*16 + 6], keys[j*16 + 7], keys[j*16 + 8], 
                               keys[j*16 + 9], keys[j*16 + 10], keys[j*16 + 11], keys[j*16 + 12], 
                               keys[j*16 + 13], keys[j*16 + 14], keys[j*16 + 15]});
+        if(showSteps) { printf("Reversed xor w\\key\n"); printCharArr(blocks[i], 16);}
+
         RevMixColumns(blocks[i]);
-        RevShiftRows(blocks[i]);
-        RevSubBytes(blocks[i]);
+        if(showSteps) { printf("Reversed mixcolumns\n"); printCharArr(blocks[i], 16);}
 
       }      
+
+      RevShiftRows(blocks[i]);
+      if(showSteps) { printf("Reversed final shiftrows\n"); printCharArr(blocks[i], 16);}
+
+      RevSubBytes(blocks[i], dataSize);
+      if(showSteps) { printf("Reversed final S-box\n"); printCharArr(blocks[i], 16);}
+
       AddRoundKey(blocks[i], (unsigned char[]){keys[0], keys[1], keys[2], keys[3], 
                               keys[4], keys[5], keys[6], keys[7], keys[8], 
                               keys[9], keys[10], keys[11], keys[12], 
                               keys[13], keys[14], keys[15]});
+      if(showSteps) { printf("Reversed initial xor w\\key\n"); printCharArr(blocks[i], 16);}
       
     }
 
@@ -507,22 +367,36 @@ unsigned char* Decrypt(unsigned char *data,unsigned char *key, size_t dataSize)
 int main()
 {
   // static unsigned char data[] = {0, 0, 1, 1, 3, 3, 7, 7, 0xf, 0xf, 0x1f, 0x1f, 0x3f, 0x3f, 0x7f, 0x7f}; //should malloc this shit
-  static unsigned char data[] = {1, 0x2b, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}; //should malloc this shit
+  static unsigned char data[] = {0xbb, 0x0f, 0x22, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}; //should malloc this shit
 
   // static unsigned char key[] = {0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c };
   // static unsigned char key[] = {0x3c , 0x4f, 0xcf, 0x09,  };
   // static unsigned char key[] = {0x16, 0x15, 0x7e, 0x2b, 0xa6, 0xd2, 0xae, 0x28, 0x88, 0x15, 0xf7, 0xab, 0x3c , 0x4f, 0xcf, 0x09};
-  static unsigned char key[] = {8, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x14};
+  static unsigned char key[] = {0xbb, 0x0f, 0x22, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x00};
 
 
   // static unsigned char key[] = {0x54 , 0x68, 0x61, 0x74, 0x73, 0x20, 0x6D, 0x79, 0x20, 0x4B, 0x75, 0x67, 0x20, 0x46, 0x7e, 0x75};
 
 
-  unsigned char* res = Encrypt(data, key, sizeof(data));
+  unsigned char* res = Encrypt(data, key, sizeof(data), false);
 
-  for (int i = 0; i < sizeof(data) + sizeof(data)%16; i++)
+  for (int i = 0; i < sizeof(data) + sizeof(data)%16 ; i++)
     printf("%x", res[i]);
-  
+
+
   printf("\n");
+
+  unsigned char* org = Decrypt(res, key, sizeof(data), false);
+
+  for (int i = 0; i < sizeof(data); i++)
+    printf("%x", org[i]);
+  
+  // unsigned char fag[17];
+  // for (int i = 0; i < 17; i++)
+  // {
+  //   fag[i] = org[i];
+  // }
+  
+  
   exit(EXIT_SUCCESS);
 }
