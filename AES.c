@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-
+#define NEWSIZE(x) ((x + 15)/16)*16 
 
 static const unsigned char S_BOX[] = {
   0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7, 0xab, 0x76,
@@ -52,9 +52,9 @@ static const unsigned char S_BOX[] = {
       }
 
       
-      printf("\n");
+      printf(" ");
     }
-    printf("\n");
+    printf("\n\n");
   }
 
 
@@ -169,7 +169,8 @@ static unsigned char** SplitBlocks(unsigned char *bytes, size_t size)
   unsigned char** blocks = malloc(size*sizeof(char *)/16 + 1);
   for (int i = 0; i < size/16 + 1; i++)
   {
-    static unsigned char arr[16];
+    unsigned char* arr = malloc(16);
+    // printf("fag %p",arr);
     blocks[i] = arr;
   }
 
@@ -254,11 +255,15 @@ unsigned char* Encrypt(unsigned char *data, unsigned char *key, size_t dataSize,
     keys = KeyExpansion(key, showSteps);
 
     unsigned char** blocks = SplitBlocks(data, dataSize);
-    dataSize += dataSize%16;
+    dataSize = NEWSIZE(dataSize);
 
     for (int i = 0; i < dataSize/16; i++)
-    {
+    {        
+      if(showSteps) printf("---------- BLOCK %d ----------\n", i);
       if(showSteps) { printf("input\n"); printCharArr(blocks[i], 16);}
+      // if(showSteps) { printf("inputA\n"); printCharArr(blocks[0], 16);}
+      // if(showSteps) { printf("inputA\n"); printCharArr(blocks[1], 16);}
+
 
       AddRoundKey(blocks[i], (unsigned char[]){keys[0], keys[1], keys[2], keys[3], 
                               keys[4], keys[5], keys[6], keys[7], keys[8], 
@@ -270,7 +275,7 @@ unsigned char* Encrypt(unsigned char *data, unsigned char *key, size_t dataSize,
       {
         if(showSteps) {printf("-----ROUND %d-----\n", j);}
 
-        SubBytes(blocks[i], dataSize);        
+        SubBytes(blocks[i], 16);        
         if(showSteps) { printf("after s-box\n"); printCharArr(blocks[i], 16);}
 
         ShiftRows(blocks[i]);
@@ -288,7 +293,7 @@ unsigned char* Encrypt(unsigned char *data, unsigned char *key, size_t dataSize,
       }
       if(showSteps) {printf("-----ROUND 10-----\n");}
 
-      SubBytes(blocks[i], dataSize);
+      SubBytes(blocks[i], 16);
       if(showSteps) { printf("after s-box\n"); printCharArr(blocks[i], 16);}
 
       ShiftRows(blocks[i]);
@@ -313,9 +318,9 @@ unsigned char* Decrypt(unsigned char *data,unsigned char *key, size_t dataSize, 
     keys = KeyExpansion(key, showSteps);
 
     unsigned char** blocks = SplitBlocks(data, dataSize);
-    dataSize += dataSize%16;
+    dataSize = NEWSIZE(dataSize);
 
-    for (int i = 0; i < sizeof(blocks)/sizeof(char *); i++)
+    for (int i = 0; i < dataSize/16; i++)
     {
       if(showSteps) { printf("input\n"); printCharArr(blocks[i], 16);}
 
@@ -333,7 +338,7 @@ unsigned char* Decrypt(unsigned char *data,unsigned char *key, size_t dataSize, 
         RevShiftRows(blocks[i]);
         if(showSteps) { printf("Reversed shiftrows\n"); printCharArr(blocks[i], 16);}
 
-        RevSubBytes(blocks[i], dataSize);
+        RevSubBytes(blocks[i], 16);
         if(showSteps) { printf("Reversed s-box\n"); printCharArr(blocks[i], 16);}
 
         AddRoundKey(blocks[i], (unsigned char[]){keys[j*16], keys[j*16 + 1], keys[j*16 + 2], keys[j*16 + 3], 
@@ -350,7 +355,7 @@ unsigned char* Decrypt(unsigned char *data,unsigned char *key, size_t dataSize, 
       RevShiftRows(blocks[i]);
       if(showSteps) { printf("Reversed final shiftrows\n"); printCharArr(blocks[i], 16);}
 
-      RevSubBytes(blocks[i], dataSize);
+      RevSubBytes(blocks[i], 16);
       if(showSteps) { printf("Reversed final S-box\n"); printCharArr(blocks[i], 16);}
 
       AddRoundKey(blocks[i], (unsigned char[]){keys[0], keys[1], keys[2], keys[3], 
@@ -367,8 +372,8 @@ unsigned char* Decrypt(unsigned char *data,unsigned char *key, size_t dataSize, 
 int main()
 {
   // static unsigned char data[] = {0, 0, 1, 1, 3, 3, 7, 7, 0xf, 0xf, 0x1f, 0x1f, 0x3f, 0x3f, 0x7f, 0x7f}; //should malloc this shit
-  static unsigned char data[] = {0xbb, 0x0f, 0x22, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}; //should malloc this shit
-
+  static unsigned char data[] = {0xbb, 0x0f, 0x22, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x4f, 0x4, 0x8}; //should malloc this shit
+  // static unsigned char data[] = {0x4, 0x8, 0x0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x0};
   // static unsigned char key[] = {0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c };
   // static unsigned char key[] = {0x3c , 0x4f, 0xcf, 0x09,  };
   // static unsigned char key[] = {0x16, 0x15, 0x7e, 0x2b, 0xa6, 0xd2, 0xae, 0x28, 0x88, 0x15, 0xf7, 0xab, 0x3c , 0x4f, 0xcf, 0x09};
@@ -380,16 +385,15 @@ int main()
 
   unsigned char* res = Encrypt(data, key, sizeof(data), false);
 
-  for (int i = 0; i < sizeof(data) + sizeof(data)%16 ; i++)
-    printf("%x", res[i]);
+  // for (int i = 0; i < NEWSIZE(sizeof(data)) ; i++)
+  //   printf("%x", res[i]);
 
 
-  printf("\n");
+  printCharArr(res, NEWSIZE(sizeof(data)));
 
-  unsigned char* org = Decrypt(res, key, sizeof(data), false);
+  unsigned char* org = Decrypt(res, key, NEWSIZE(sizeof(data)), false);
 
-  for (int i = 0; i < sizeof(data); i++)
-    printf("%x", org[i]);
+  printCharArr(org, NEWSIZE(sizeof(data)));
   
   // unsigned char fag[17];
   // for (int i = 0; i < 17; i++)
