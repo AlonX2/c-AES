@@ -104,7 +104,6 @@ void RevShiftRows(unsigned char* bytes)
 
 }
 
-
 unsigned char Gmul(unsigned char a, unsigned char b)
 {
 
@@ -210,7 +209,7 @@ unsigned char* ConnectBlocks(unsigned char **blocks, size_t size)
 unsigned char* KeyExpansion(unsigned char *key, bool printKey)
 {
 
-    static const unsigned int ROUND_CONST[] = {0x00, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36 }; //change for big endian
+    static const unsigned int ROUND_CONST[] = {0x00, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36 };
     static unsigned char keys[176];
 
     for (int i = 0; i < 16; i++)
@@ -223,7 +222,7 @@ unsigned char* KeyExpansion(unsigned char *key, bool printKey)
         unsigned char *operand = malloc(4); 
 
         for (int j = 0; j < 4; j++)   
-          operand[j] = keys[i - 4 + (j+1)%4]; //check if right
+          operand[j] = keys[i - 4 + (j+1)%4]; 
           
         SubBytes(operand, sizeof(operand));
         
@@ -261,9 +260,6 @@ unsigned char* Encrypt(unsigned char *data, unsigned char *key, size_t dataSize,
     {        
       if(showSteps) printf("---------- BLOCK %d ----------\n", i);
       if(showSteps) { printf("input\n"); printCharArr(blocks[i], 16);}
-      // if(showSteps) { printf("inputA\n"); printCharArr(blocks[0], 16);}
-      // if(showSteps) { printf("inputA\n"); printCharArr(blocks[1], 16);}
-
 
       AddRoundKey(blocks[i], (unsigned char[]){keys[0], keys[1], keys[2], keys[3], 
                               keys[4], keys[5], keys[6], keys[7], keys[8], 
@@ -310,7 +306,7 @@ unsigned char* Encrypt(unsigned char *data, unsigned char *key, size_t dataSize,
 
 }
 
-unsigned char* Decrypt(unsigned char *data,unsigned char *key, size_t dataSize, bool showSteps)
+unsigned char* Decrypt(unsigned char *data, unsigned char *key, size_t dataSize, bool showSteps)
 {
     static unsigned char* keys;
 
@@ -371,36 +367,17 @@ unsigned char* Decrypt(unsigned char *data,unsigned char *key, size_t dataSize, 
 
 int main()
 {
-  // static unsigned char data[] = {0, 0, 1, 1, 3, 3, 7, 7, 0xf, 0xf, 0x1f, 0x1f, 0x3f, 0x3f, 0x7f, 0x7f}; //should malloc this shit
-  static unsigned char data[] = {0xbb, 0x0f, 0x22, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x4f, 0x4, 0x8}; //should malloc this shit
-  // static unsigned char data[] = {0x4, 0x8, 0x0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x0};
-  // static unsigned char key[] = {0x2b, 0x7e, 0x15, 0x16, 0x28, 0xae, 0xd2, 0xa6, 0xab, 0xf7, 0x15, 0x88, 0x09, 0xcf, 0x4f, 0x3c };
-  // static unsigned char key[] = {0x3c , 0x4f, 0xcf, 0x09,  };
-  // static unsigned char key[] = {0x16, 0x15, 0x7e, 0x2b, 0xa6, 0xd2, 0xae, 0x28, 0x88, 0x15, 0xf7, 0xab, 0x3c , 0x4f, 0xcf, 0x09};
-  static unsigned char key[] = {0xbb, 0x0f, 0x22, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x00};
+  //Test vectors from the AES whitepaper
+  static unsigned char data[] = {0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xaa,0xbb,0xcc,0xdd,0xee,0xff}; 
+  static unsigned char key[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f};
 
-
-  // static unsigned char key[] = {0x54 , 0x68, 0x61, 0x74, 0x73, 0x20, 0x6D, 0x79, 0x20, 0x4B, 0x75, 0x67, 0x20, 0x46, 0x7e, 0x75};
-
-
+  //Encrypting the plaintext using the given key
   unsigned char* res = Encrypt(data, key, sizeof(data), false);
-
-  // for (int i = 0; i < NEWSIZE(sizeof(data)) ; i++)
-  //   printf("%x", res[i]);
-
-
   printCharArr(res, NEWSIZE(sizeof(data)));
 
+  //Decrypting the ciphertext using the given key
   unsigned char* org = Decrypt(res, key, NEWSIZE(sizeof(data)), false);
-
   printCharArr(org, NEWSIZE(sizeof(data)));
-  
-  // unsigned char fag[17];
-  // for (int i = 0; i < 17; i++)
-  // {
-  //   fag[i] = org[i];
-  // }
-  
-  
+
   exit(EXIT_SUCCESS);
 }
