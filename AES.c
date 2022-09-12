@@ -1,8 +1,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <string.h>
+#include <io.h>
 
-#define NEWSIZE(x) ((x + 15)/16)*16 
+
+#define NEWSIZE(x) (((x) + 15)/16)*16 
 
 static const unsigned char S_BOX[] = {
   0x63, 0x7c, 0x77, 0x7b, 0xf2, 0x6b, 0x6f, 0xc5, 0x30, 0x01, 0x67, 0x2b, 0xfe, 0xd7, 0xab, 0x76,
@@ -42,9 +45,9 @@ static const unsigned char S_BOX[] = {
 
   void printCharArr(unsigned char* arr, size_t size)
   {
-    for (int i = 0; i < size/4; i++)
+    for (int i = 0; i < size/4; ++i)
     {
-      for (int j = 0; j < 4; j++)
+      for (int j = 0; j < 4; ++j)
       {
         if(arr[i*4 + j] < 0x10)
           printf("%hhx",0);
@@ -60,21 +63,21 @@ static const unsigned char S_BOX[] = {
 
 void SubBytes(unsigned char* bytes, size_t size)
 {
-  for (int i = 0; i < size; i++)
+  for (int i = 0; i < size; ++i)
     bytes[i] = S_BOX[bytes[i]];
 }
 
 void RevSubBytes(unsigned char* bytes, size_t size)
 {
-  for (int i = 0; i < size; i++)
+  for (int i = 0; i < size; ++i)
     bytes[i] = REV_S_BOX[bytes[i]];
 }
 
 void ShiftRows(unsigned char* bytes)
 {
-  for (int i = 0; i < 4; i++)
+  for (int i = 0; i < 4; ++i)
   {
-    for (int j = 0; j < i; j++)
+    for (int j = 0; j < i; ++j)
     {
       unsigned char temp = bytes[i];
       bytes[i] = bytes[i + 4];
@@ -89,9 +92,9 @@ void ShiftRows(unsigned char* bytes)
 
 void RevShiftRows(unsigned char* bytes)
 {
-  for (int i = 0; i < 4; i++)
+  for (int i = 0; i < 4; ++i)
   {
-    for (int j = 0; j < i; j++)
+    for (int j = 0; j < i; ++j)
     {
       unsigned char temp = bytes[i + 12];
       bytes[i + 12] = bytes[i + 8];
@@ -125,10 +128,10 @@ unsigned char Gmul(unsigned char a, unsigned char b)
 
 void MixColumns(unsigned char* bytes)
 {
-  for (int i = 0; i < 4; i++)
+  for (int i = 0; i < 4; ++i)
   {
       unsigned char arr[4];
-      for (int j = 0; j < 4; j++)
+      for (int j = 0; j < 4; ++j)
         arr[j] = bytes[4*i + j];
 
     bytes[4*i] = Gmul(arr[0], 2) ^ Gmul(arr[1], 3) ^ arr[2] ^ arr[3];
@@ -141,10 +144,10 @@ void MixColumns(unsigned char* bytes)
 }
 void RevMixColumns(unsigned char* bytes)
 {
-  for (int i = 0; i < 4; i++)
+  for (int i = 0; i < 4; ++i)
   {
       unsigned char arr[4];
-      for (int j = 0; j < 4; j++)
+      for (int j = 0; j < 4; ++j)
         arr[j] = bytes[4*i + j];
 
     bytes[4*i] = Gmul(arr[0], 0x0E) ^ Gmul(arr[1], 0x0B) ^ Gmul(arr[2], 0x0D) ^ Gmul(arr[3], 0x09);
@@ -157,7 +160,7 @@ void RevMixColumns(unsigned char* bytes)
 
 void AddRoundKey(unsigned char* bytes, unsigned char* key)
 {
-    for (int i = 0; i < 16; i++)
+    for (int i = 0; i < 16; ++i)
       bytes[i] ^= key[i];
 }
 
@@ -166,7 +169,7 @@ static unsigned char** SplitBlocks(unsigned char *bytes, size_t size)
 {
   
   unsigned char** blocks = malloc(size*sizeof(char *)/16 + 1);
-  for (int i = 0; i < size/16 + 1; i++)
+  for (int i = 0; i < size/16 + 1; ++i)
   {
     unsigned char* arr = malloc(16);
     // printf("fag %p",arr);
@@ -176,7 +179,7 @@ static unsigned char** SplitBlocks(unsigned char *bytes, size_t size)
   
   for (int i = 0; i < size; i+=16)
   {
-    for (int j = 0; j < 16; j++)
+    for (int j = 0; j < 16; ++j)
     {
       if(j + i >= size) 
       {
@@ -196,7 +199,7 @@ unsigned char* ConnectBlocks(unsigned char **blocks, size_t size)
   unsigned char *final = malloc(size);
   for (int i = 0; i < size; i+=16)
   {
-    for (int j = 0; j < 16; j++)
+    for (int j = 0; j < 16; ++j)
     {
       final[j + i] = blocks[i/16][j];
     }
@@ -212,7 +215,7 @@ unsigned char* KeyExpansion(unsigned char *key, bool printKey)
     static const unsigned int ROUND_CONST[] = {0x00, 0x01, 0x02, 0x04, 0x08, 0x10, 0x20, 0x40, 0x80, 0x1b, 0x36 };
     static unsigned char keys[176];
 
-    for (int i = 0; i < 16; i++)
+    for (int i = 0; i < 16; ++i)
       keys[i] = key[i];
 
     for (int i = 16; i < 176; i+=4)
@@ -221,13 +224,13 @@ unsigned char* KeyExpansion(unsigned char *key, bool printKey)
       {
         unsigned char *operand = malloc(4); 
 
-        for (int j = 0; j < 4; j++)   
+        for (int j = 0; j < 4; ++j)   
           operand[j] = keys[i - 4 + (j+1)%4]; 
           
         SubBytes(operand, sizeof(operand));
         
         operand[0] = operand[0] ^ ROUND_CONST[i/16];
-        for (int j = 0; j < 4; j++)        
+        for (int j = 0; j < 4; ++j)        
           keys[i + j] = keys[i - 16 + j] ^ operand[j];
         
         free(operand);
@@ -235,7 +238,7 @@ unsigned char* KeyExpansion(unsigned char *key, bool printKey)
       }
       else
       { 
-        for (int j = 0; j < 4; j++)        
+        for (int j = 0; j < 4; ++j)        
           keys[i + j] = keys[i - 16 + j] ^ keys[i - 4 + j];
         
       }
@@ -249,14 +252,13 @@ unsigned char* KeyExpansion(unsigned char *key, bool printKey)
 unsigned char* Encrypt(unsigned char *data, unsigned char *key, size_t dataSize, bool showSteps)
 {
     static unsigned char* keys;
-
-    if(showSteps) printf("Expanded Key:\n");
+    if(showSteps) printf("\n\nExpanded Key:\n");
     keys = KeyExpansion(key, showSteps);
 
     unsigned char** blocks = SplitBlocks(data, dataSize);
     dataSize = NEWSIZE(dataSize);
 
-    for (int i = 0; i < dataSize/16; i++)
+    for (int i = 0; i < dataSize/16; ++i)
     {        
       if(showSteps) printf("---------- BLOCK %d ----------\n", i);
       if(showSteps) { printf("input\n"); printCharArr(blocks[i], 16);}
@@ -267,7 +269,7 @@ unsigned char* Encrypt(unsigned char *data, unsigned char *key, size_t dataSize,
                               keys[13], keys[14], keys[15]});
       if(showSteps) { printf("initial xor w\\key\n"); printCharArr(blocks[i], 16);}
       
-      for (int j = 1; j < 10; j++)
+      for (int j = 1; j < 10; ++j)
       {
         if(showSteps) {printf("-----ROUND %d-----\n", j);}
 
@@ -308,16 +310,17 @@ unsigned char* Encrypt(unsigned char *data, unsigned char *key, size_t dataSize,
 
 unsigned char* Decrypt(unsigned char *data, unsigned char *key, size_t dataSize, bool showSteps)
 {
-    static unsigned char* keys;
+    static unsigned char *keys;
 
-    if(showSteps) printf("Expanded Key:\n");
+    if(showSteps) printf("\n\nExpanded Key:\n");
     keys = KeyExpansion(key, showSteps);
 
     unsigned char** blocks = SplitBlocks(data, dataSize);
     dataSize = NEWSIZE(dataSize);
 
-    for (int i = 0; i < dataSize/16; i++)
+    for (int i = 0; i < dataSize/16; ++i)
     {
+      if(showSteps) printf("---------- BLOCK %d ----------\n", i);
       if(showSteps) { printf("input\n"); printCharArr(blocks[i], 16);}
 
       AddRoundKey(blocks[i], (unsigned char[]){keys[10*16], keys[10*16 + 1], keys[10*16 + 2], keys[10*16 + 3], 
@@ -328,7 +331,7 @@ unsigned char* Decrypt(unsigned char *data, unsigned char *key, size_t dataSize,
 
 
 
-      for (int j = 9; j > 0; j--)
+      for (int j = 9; j > 0; --j)
       {
         if(showSteps) {printf("----- Reversing ROUND %d-----\n", j);}
         RevShiftRows(blocks[i]);
@@ -365,19 +368,112 @@ unsigned char* Decrypt(unsigned char *data, unsigned char *key, size_t dataSize,
     return ConnectBlocks(blocks, dataSize);
 }
 
-int main()
+int main(int argc, char *argv[])
 {
-  //Test vectors from the AES whitepaper
-  static unsigned char data[] = {0x00,0x11,0x22,0x33,0x44,0x55,0x66,0x77,0x88,0x99,0xaa,0xbb,0xcc,0xdd,0xee,0xff}; 
-  static unsigned char key[] = {0x00,0x01,0x02,0x03,0x04,0x05,0x06,0x07,0x08,0x09,0x0a,0x0b,0x0c,0x0d,0x0e,0x0f};
+  unsigned char key[16];
+  bool showProgress = false;
+  
+  if(argc > 2 && strcmp(argv[2], "-show") == 0){
+    showProgress = true;
+  }
 
-  //Encrypting the plaintext using the given key
-  unsigned char* res = Encrypt(data, key, sizeof(data), false);
-  printCharArr(res, NEWSIZE(sizeof(data)));
+  printf("input your encryption key in hex format (16 bytes long):\n");
 
-  //Decrypting the ciphertext using the given key
-  unsigned char* org = Decrypt(res, key, NEWSIZE(sizeof(data)), false);
-  printCharArr(org, NEWSIZE(sizeof(data)));
+  for (int i = 0; i < 16; ++i)
+  {
+    char inArr[2] = {getc(stdin), getc(stdin)};
+    char *endptr = NULL;
+    unsigned char byte = (unsigned char) strtoul(inArr, &endptr, 16);
+    if(endptr != inArr + 2){
+      printf("Non hex string entered, please enter a valid hex value as the key.\n");
+      exit(EXIT_FAILURE);
+    }
+    key[i] = byte;
+  }
+  getc(stdin); //to catch the null terminator char in the input stream of the key string
+
+  if(argc > 1 && strlen(argv[1]) == 1 && argv[1][0] == 'e'){
+
+    printf("input a path to the file you wish to encrypt\n");
+
+    char path[101];
+    fgets(path, 100, stdin);
+    path[strcspn(path, "\n")] = '\0';
+
+    FILE *fp = fopen(path, "rb+");
+    if(fp == NULL){
+      printf("Error: Failed to find file");
+      exit(EXIT_FAILURE);
+    }
+
+    unsigned char data[16];
+    int totalRead = 0; 
+    int lastRead;
+
+    while((lastRead = fread(data, 1, 16, fp)) > 15){
+      totalRead += lastRead;
+      unsigned char *ciphertext = Encrypt(data, key, 16, showProgress);
+      fseek(fp, totalRead - 16, SEEK_SET);
+      fwrite(ciphertext, 1, 16, fp); 
+      fseek(fp, totalRead, SEEK_SET);
+    }
+
+    if(lastRead != 0){
+      unsigned char *ciphertext = Encrypt(data, key, lastRead, showProgress);
+      fseek(fp, totalRead, SEEK_SET);
+      fwrite(ciphertext, 1, 16, fp); 
+    }
+
+    printf("%d bytes were successfully read and encrypted\n", totalRead + lastRead);
+    fclose(fp);
+
+  }
+
+
+  if(argc > 1 && strlen(argv[1]) == 1 && argv[1][0] == 'd'){
+
+    printf("input a path to the file you wish to decrypt\n");
+
+    char path[101];
+    fgets(path, 100, stdin);
+    path[strcspn(path, "\n")] = '\0';
+
+    FILE *fp = fopen(path, "rb+");
+    if(fp == NULL){
+      printf("Error: Failed to find file");
+      exit(EXIT_FAILURE);
+    }
+
+    unsigned char data[16];
+    unsigned char *plaintextPtr = NULL;
+    int totalRead = 0; 
+    int lastRead;
+
+    while((lastRead = fread(data, 1, 16, fp)) > 15){
+      totalRead += 16;
+      plaintextPtr = Decrypt(data, key, 16, showProgress);
+      fseek(fp, totalRead - 16, SEEK_SET);
+      fwrite(plaintextPtr, 1, 16, fp); 
+      fseek(fp, totalRead, SEEK_SET);
+    }
+
+    //deleting the trailing zeros in the last block(since they were probably added as padding when the data was encrypted).
+    int zeros = 0;
+    for (int i = 0; i < 16; i++)
+    {
+      if(plaintextPtr[i] == '\0'){
+        ++zeros;
+      }
+      else{
+        zeros = 0;
+      }
+    }
+    _chsize(_fileno(fp), totalRead - zeros);
+
+    printf("%d bytes were successfully read and decrypted\n", totalRead + lastRead);
+    fclose(fp);
+
+  }
 
   exit(EXIT_SUCCESS);
 }
